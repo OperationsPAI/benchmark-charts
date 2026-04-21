@@ -1,0 +1,6 @@
+dependencies:
+- name: onlineboutique
+  repository: ""
+  version: 0.10.5
+digest: sha256:dfc1c239af19076a1a012a98b18e53c80008f856c2f304e0ebcffba58aa62e56
+generated: "2026-04-21T04:38:59.739721036+01:00"

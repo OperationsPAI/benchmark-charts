@@ -1,0 +1,21 @@
+clusterCollector:
+  service: otel-collector.otel.svc.cluster.local
+
+onlineboutique:
+  images:
+    repository: us-central1-docker.pkg.dev/google-samples/microservices-demo
+    tag: ""
+  opentelemetryCollector:
+    create: true
+    name: opentelemetrycollector
+    projectId: "PROJECT_ID"
+  googleCloudOperations:
+    profiler: false
+    tracing: true
+    metrics: false
+  networkPolicies:   { create: false }
+  sidecars:          { create: false }
+  authorizationPolicies: { create: false }
+  shoppingAssistantService: { create: false }
+  frontend:
+    externalService: false   # kind cluster has no LB provider; skip LoadBalancer svc

@@ -1,0 +1,22 @@
+# Static ExternalName Service replacing what the subchart's
+# opentelemetry-collector.yaml would have deployed. Services in this
+# release are injected with COLLECTOR_SERVICE_ADDR=opentelemetrycollector:4317
+# (gated by onlineboutique.opentelemetryCollector.create=true); this Service
+# resolves that name to the cluster-wide collector.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.onlineboutique.opentelemetryCollector.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ExternalName
+  externalName: {{ .Values.clusterCollector.service }}
+  ports:
+  - name: otlp-grpc
+    port: 4317
+    targetPort: 4317
+    protocol: TCP
+  - name: otlp-http
+    port: 4318
+    targetPort: 4318
+    protocol: TCP
