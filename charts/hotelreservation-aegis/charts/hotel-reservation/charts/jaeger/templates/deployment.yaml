@@ -1,0 +1,48 @@
+{{- /*
+Custom deployment: swaps jaegertracing/all-in-one for otel-collector-contrib.
+The collector receives Jaeger spans on the same ports DSB services target
+(UDP 6831 compact-thrift, 6832 binary-thrift, TCP 14268 HTTP) and forwards
+them via OTLP to the aegis otel-collector → ClickHouse pipeline.
+*/ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "hotel-reservation.labels" . | nindent 4 }}
+    service: {{ .Values.name }}-{{ include "hotel-reservation.fullname" . }}
+  name: {{ .Values.name }}-{{ include "hotel-reservation.fullname" . }}
+spec:
+  replicas: {{ .Values.replicas | default .Values.global.replicas }}
+  selector:
+    matchLabels:
+      {{- include "hotel-reservation.selectorLabels" . | nindent 6 }}
+      service: {{ .Values.name }}-{{ include "hotel-reservation.fullname" . }}
+      app: {{ .Values.name }}-{{ include "hotel-reservation.fullname" . }}
+  template:
+    metadata:
+      labels:
+        {{- include "hotel-reservation.labels" . | nindent 8 }}
+        service: {{ .Values.name }}-{{ include "hotel-reservation.fullname" . }}
+        app: {{ .Values.name }}-{{ include "hotel-reservation.fullname" . }}
+    spec:
+      containers:
+      - name: {{ .Values.container.name | default "otel-collector" }}
+        image: {{ .Values.container.otelImage | default "otel/opentelemetry-collector-contrib:0.100.0" }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy | default "IfNotPresent" }}
+        args:
+        - --config=/etc/otelcol/config.yaml
+        ports:
+        - containerPort: 6831
+          protocol: UDP
+        - containerPort: 6832
+          protocol: UDP
+        - containerPort: 14268
+        volumeMounts:
+        - name: otel-config
+          mountPath: /etc/otelcol
+      volumes:
+      - name: otel-config
+        configMap:
+          name: {{ .Values.name }}-{{ include "hotel-reservation.fullname" . }}-otel-config
+      hostname: {{ .Values.name }}-{{ include "hotel-reservation.fullname" . }}
+      restartPolicy: {{ .Values.restartPolicy | default .Values.global.restartPolicy }}

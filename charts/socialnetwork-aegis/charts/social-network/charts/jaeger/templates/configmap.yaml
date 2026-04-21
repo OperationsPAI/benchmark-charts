@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.name }}-otel-config
+  labels:
+    socialnetwork/service: {{ .Values.name }}
+data:
+  config.yaml: |
+    receivers:
+      jaeger:
+        protocols:
+          thrift_compact:
+            endpoint: 0.0.0.0:6831
+          thrift_binary:
+            endpoint: 0.0.0.0:6832
+          thrift_http:
+            endpoint: 0.0.0.0:14268
+    processors:
+      batch: {}
+    exporters:
+      otlp:
+        endpoint: {{ .Values.otlpEndpoint | default "otel-collector.otel.svc.cluster.local:4317" }}
+        tls:
+          insecure: true
+    service:
+      pipelines:
+        traces:
+          receivers: [jaeger]
+          processors: [batch]
+          exporters: [otlp]

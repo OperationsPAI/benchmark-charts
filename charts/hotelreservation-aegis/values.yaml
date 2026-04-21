@@ -1,0 +1,28 @@
+loadgen:
+  image: docker.io/opspai/dsb-wrk2:20260421
+  targetUrl: "http://frontend-hs0-hotelres:5000"
+  luaScript: "/scripts/hotel-reservation/mixed-workload_type_1.lua"
+  threads: 2
+  connections: 20
+  duration: "30s"
+  rate: 10
+
+hotel-reservation:
+  global:
+    # Upstream default docker.io/ + defaultImageVersion=latest — keep, images
+    # are public. deathstarbench/hotel-reservation:latest is pre-loaded into
+    # kind; infra images (consul/memcached/mongo/jaeger) are pulled on demand
+    # with IfNotPresent.
+    dockerRegistry: docker.io
+    defaultImageVersion: latest
+    imagePullPolicy: IfNotPresent
+    serviceType: ClusterIP
+    replicas: 1
+    restartPolicy: Always
+    mongodb:
+      # Disable persistent volumes; kind has no default provisioner and we
+      # don't need durable state across a single regression run.
+      persistentVolume:
+        enabled: false
+    memcached:
+      HACount: 1

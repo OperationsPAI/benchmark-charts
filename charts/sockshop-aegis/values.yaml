@@ -1,0 +1,41 @@
+sockshop:
+  global:
+    # Aegis-published images (docker.io/opspai) — rebuilt from
+    # LGU-SE-Internal/coherence-helidon-sockshop-sample. Frontend image
+    # from YifanYang6/front-end.
+    imageRegistry: docker.io/opspai
+    imageTag: "2.12.3"
+    imagePullPolicy: IfNotPresent
+    coherenceCluster: SockShop
+  frontend:
+    enabled: true
+    replicas: 1
+    image:
+      repository: ss-frontend
+      tag: "propagator"
+    # ClusterIP keeps kind happy (no LB provider); fault injection is pod-label
+    # targeted so external access is not required for aegis workflows.
+    service:
+      type: ClusterIP
+      port: 80
+      targetPort: 8079
+    # Upstream's readOnlyRootFilesystem breaks the Node container (npm cache
+    # needs to be writable). Let the pod write to /tmp via emptyDir rather
+    # than fight the root-fs lock.
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 10001
+      readOnlyRootFilesystem: false
+  loadgen:
+    # Disabled by default; aegis handles its own traffic generation for
+    # fault-injection regression runs.
+    enabled: false
+  coherence:
+    # Service monitors require prometheus-operator CRDs. Most aegis clusters
+    # don't install them, so turn off ServiceMonitor creation to keep
+    # RestartPedestal's helm install from failing on unknown kind.
+    serviceMonitor:
+      enabled: false
+    readinessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10

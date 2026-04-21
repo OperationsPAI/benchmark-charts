@@ -1,0 +1,44 @@
+{{- if .Values.shipping.enabled }}
+apiVersion: coherence.oracle.com/v1
+kind: Coherence
+metadata:
+  name: {{ .Values.shipping.name }}
+  labels:
+    {{- include "sockshop.service.labels" (dict "name" .Values.shipping.name) | nindent 4 }}
+spec:
+  labels:
+    {{- include "sockshop.service.labels" (dict "name" .Values.shipping.name) | nindent 4 }}
+  cluster: {{ .Values.global.coherenceCluster }}
+  role: Shipping
+  replicas: {{ .Values.shipping.replicas }}
+  image: {{ include "sockshop.image" (dict "global" .Values.global "image" .Values.shipping.image) }}
+  readinessProbe:
+    initialDelaySeconds: {{ .Values.coherence.readinessProbe.initialDelaySeconds }}
+    periodSeconds: {{ .Values.coherence.readinessProbe.periodSeconds }}
+  application:
+    type: helidon
+  annotations:
+    {{- include "sockshop.otel.podAnnotations" . | nindent 4 }}
+  jvm:
+    memory:
+      heapSize: {{ .Values.coherence.jvm.memory.heapSize }}
+    args:
+      {{- toYaml .Values.coherence.jvm.args | nindent 6 }}
+  coherence:
+    metrics:
+      enabled: {{ .Values.coherence.metrics.enabled }}
+  env:
+    - name: OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED
+      value: "true"
+  ports:
+    - name: http
+      port: 7001
+      service:
+        name: {{ .Values.shipping.service.name }}
+        port: {{ .Values.shipping.service.port }}
+      serviceMonitor:
+        enabled: {{ .Values.coherence.serviceMonitor.enabled }}
+    - name: metrics
+      serviceMonitor:
+        enabled: {{ .Values.coherence.serviceMonitor.enabled }}
+{{- end }}

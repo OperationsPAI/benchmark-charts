@@ -1,0 +1,26 @@
+loadgen:
+  image: docker.io/opspai/dsb-wrk2:20260421
+  targetUrl: "http://nginx-thrift:8080/wrk2-api/post/compose"
+  luaScript: "/scripts/social-network/compose-post.lua"
+  threads: 2
+  connections: 20
+  duration: "30s"
+  rate: 10
+
+social-network:
+  global:
+    # Upstream public images on docker.io; kind pulls on demand.
+    dockerRegistry: docker.io
+    defaultImageVersion: latest
+    imagePullPolicy: IfNotPresent
+    serviceType: ClusterIP
+    replicas: 1
+    restartPolicy: Always
+    # Keep defaults: redis.standalone/memcached.standalone/mongodb.standalone enabled,
+    # cluster + sharding disabled. This matches upstream's simplest single-replica path.
+    jaeger:
+      # Disable Jaeger sampling spans — aegis collects via OTLP sidecar on the
+      # pedestal, not from upstream Jaeger.
+      disabled: false
+      samplerType: probabilistic
+      samplerParam: 0.1
