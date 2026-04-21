@@ -1,0 +1,23 @@
+# Cluster-wide OTel collector (otel-kube-stack deployment collector) that the
+# shim ExternalName resolves to.
+clusterCollector:
+  service: otel-collector.otel.svc.cluster.local
+
+opentelemetry-demo:
+  # Disable the in-chart collector; we route OTLP to the cluster collector via
+  # the ExternalName shim (templates/otel-shim.yaml). Keeping the Service name
+  # stable (otel-collector) preserves the default env OTEL_COLLECTOR_NAME that
+  # every demo component uses.
+  opentelemetry-collector:
+    enabled: false
+
+  # Demo observability stack disabled — the cluster otel-kube-stack pipeline
+  # owns traces/metrics/logs. Re-enable locally if someone needs the demo UI.
+  jaeger:
+    enabled: false
+  grafana:
+    enabled: false
+  prometheus:
+    enabled: false
+  opensearch:
+    enabled: false
