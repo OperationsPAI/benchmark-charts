@@ -1,0 +1,44 @@
+{{- /*
+Continuous load generator. DSB upstream ships wrk2 scripts but expects the
+operator to drive load manually; aegis regression needs self-contained load
+during the fault window so abnormal_traces.parquet has data. This Deployment
+keeps wrk2 running against nginx-web-server in a forever loop.
+*/ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadgen
+  labels:
+    app: loadgen
+    service: loadgen
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loadgen
+  template:
+    metadata:
+      labels:
+        app: loadgen
+        service: loadgen
+    spec:
+      containers:
+      - name: wrk2
+        image: {{ .Values.loadgen.image | default "docker.io/opspai/dsb-wrk2:20260421-media" }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: TARGET_URL
+          value: {{ .Values.loadgen.targetUrl | default "http://nginx-web-server:8080/wrk2-api/review/compose" | quote }}
+        - name: LUA_SCRIPT
+          value: {{ .Values.loadgen.luaScript | default "/scripts/media-microservices/compose-review.lua" | quote }}
+        - name: THREADS
+          value: {{ .Values.loadgen.threads | default 2 | quote }}
+        - name: CONNS
+          value: {{ .Values.loadgen.connections | default 20 | quote }}
+        - name: DURATION
+          value: {{ .Values.loadgen.duration | default "30s" | quote }}
+        - name: RATE
+          value: {{ .Values.loadgen.rate | default 10 | quote }}
+        resources:
+          limits: { cpu: "200m", memory: "128Mi" }
+          requests: { cpu: "50m", memory: "64Mi" }

@@ -1,0 +1,17 @@
+loadgen:
+  image: docker.io/opspai/dsb-wrk2:20260421-media
+  targetUrl: "http://nginx-web-server:8080/wrk2-api/review/compose"
+  luaScript: "/scripts/media-microservices/compose-review.lua"
+  threads: 2
+  connections: 20
+  duration: "30s"
+  rate: 10
+
+media-microservices:
+  global:
+    dockerRegistry: docker.io
+    defaultImageVersion: latest
+    imagePullPolicy: IfNotPresent
+    serviceType: ClusterIP
+    replicas: 1
+    restartPolicy: Always
