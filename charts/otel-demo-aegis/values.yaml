@@ -27,6 +27,13 @@ opentelemetry-demo:
   # lets the wrapper forward everything upstream over a single OTLP exporter.
   opentelemetry-collector:
     enabled: true
+    presets:
+      # Disable the kubernetesAttributes preset so the demo collector stays
+      # namespace-scoped and does not create ClusterRole/ClusterRoleBinding
+      # objects. App pods already inject k8s.pod.name + k8s.namespace.name, and
+      # the cluster collector performs the cluster-wide enrichment/export path.
+      kubernetesAttributes:
+        enabled: false
     config:
       exporters:
         otlp:

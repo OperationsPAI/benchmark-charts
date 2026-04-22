@@ -5,6 +5,7 @@ Wrapper around the upstream [opentelemetry-demo](https://github.com/open-telemet
 ## What this changes vs upstream
 
 - **In-chart OTel collector kept** (`opentelemetry-collector.enabled: true`). Demo components still dial the namespace-local Service name `otel-collector:4317`, but that collector now forwards traces, metrics, and logs upstream to the cluster collector (`otel-collector.otel.svc.cluster.local:4317` by default).
+- **No cluster-scoped RBAC from the demo chart**. The wrapper disables the collector's `kubernetesAttributes` preset so installs in namespaces such as `otel-demo10`, `otel-demo11`, and `otel-demo12` do not fight over a shared `ClusterRole` / `ClusterRoleBinding`.
 - **No cross-namespace `ExternalName` shim**. Each release keeps its own stable `otel-collector` Service, so namespaces such as `otel-demo0` and `otel-demo1` do not depend on cross-namespace DNS aliases.
 - **Observability stack disabled** (`jaeger`, `grafana`, `prometheus`, `opensearch`). The cluster otel-kube-stack pipeline owns traces/metrics/logs; running the demo's full stack doubles the resource footprint and fights for port conflicts on kind.
 - **Local collector exports OTLP only**. The wrapper repoints the demo collector away from Jaeger/Prometheus/OpenSearch and sends all signals straight to the cluster collector, so this chart does not need local ClickHouse or other backend wiring.
