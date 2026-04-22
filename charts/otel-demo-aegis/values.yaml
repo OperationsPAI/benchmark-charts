@@ -1,16 +1,14 @@
 # Cluster-wide OTel collector (otel-kube-stack deployment collector) that the
-# shim ExternalName resolves to.
-clusterCollector:
-  service: otel-collector.otel.svc.cluster.local
+# demo's in-namespace collector exports to.
+global:
+  clusterCollector:
+    service: otel-collector.otel.svc.cluster.local
 
 opentelemetry-demo:
-  # Inject k8s.pod.name + k8s.namespace.name into every component's OTLP
-  # resource attributes. The cluster collector's k8sattributes processor uses
-  # these as pod_association keys to enrich traces, and the
-  # transform/service_namespace processor rewrites service.namespace from
-  # k8s.namespace.name so BuildDatapack can filter by the injected namespace.
-  # Without this the demo's hardcoded service.namespace=opentelemetry-demo
-  # never gets rewritten and abnormal_traces.parquet comes out empty.
+  # Keep pod + namespace identity on the emitted OTLP resources. The local demo
+  # collector can enrich by connection metadata, and the upstream cluster
+  # collector still uses these attributes when it rewrites service.namespace for
+  # namespace-scoped datasets.
   default:
     envOverrides:
       - name: OTEL_K8S_POD_NAME
@@ -24,12 +22,25 @@ opentelemetry-demo:
       - name: OTEL_RESOURCE_ATTRIBUTES_EXTRA
         value: k8s.pod.name=$(OTEL_K8S_POD_NAME),k8s.namespace.name=$(OTEL_K8S_NAMESPACE)
 
-  # Disable the in-chart collector; we route OTLP to the cluster collector via
-  # the ExternalName shim (templates/otel-shim.yaml). Keeping the Service name
-  # stable (otel-collector) preserves the default env OTEL_COLLECTOR_NAME that
-  # every demo component uses.
+  # Keep the in-chart collector so every demo namespace always has a local
+  # otel-collector Service. This avoids cross-namespace DNS indirection and
+  # lets the wrapper forward everything upstream over a single OTLP exporter.
   opentelemetry-collector:
-    enabled: false
+    enabled: true
+    config:
+      exporters:
+        otlp:
+          endpoint: "{{ .Values.global.clusterCollector.service }}:4317"
+          tls:
+            insecure: true
+      service:
+        pipelines:
+          traces:
+            exporters: [otlp, spanmetrics]
+          metrics:
+            exporters: [otlp]
+          logs:
+            exporters: [otlp]
 
   # Demo observability stack disabled — the cluster otel-kube-stack pipeline
   # owns traces/metrics/logs. Re-enable locally if someone needs the demo UI.

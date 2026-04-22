@@ -1,7 +1,7 @@
 apiVersion: v2
 name: otel-demo-aegis
-description: opentelemetry-demo + aegis-cluster OTel shim (wrapper chart). Routes app OTLP to the cluster collector instead of the demo's in-chart collector.
-version: 0.1.1
+description: opentelemetry-demo wrapper for aegis. Keeps the demo's in-namespace collector and forwards OTLP to the cluster collector.
+version: 0.1.2
 appVersion: "2.1.3"
 dependencies:
 - name: opentelemetry-demo
