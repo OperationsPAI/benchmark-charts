@@ -1,6 +1,7 @@
 # tools/
 
-Image build + push tooling for the four LGU-forked benchmarks:
+Image build + push tooling for the four LGU-forked benchmarks that
+don't publish their own images:
 
 | system     | alias      | fork                                                     | tag scheme           |
 | ---------- | ---------- | -------------------------------------------------------- | -------------------- |
@@ -14,6 +15,14 @@ forks' gh-pages workflows
 (`https://lgu-se-internal.github.io/DeathStarBench/`,
 `https://lgu-se-internal.github.io/TeaStore/`). This repo only owns
 their container images.
+
+**SockShop (`ss`) is fully self-hosted in its fork** and is NOT listed
+above. The `LGU-SE-Internal/coherence-helidon-sockshop-sample` fork
+publishes both its chart (gh-pages at
+`https://lgu-se-internal.github.io/coherence-helidon-sockshop-sample/`)
+and its images (`docker.io/opspai/ss-*` at tag `YYYYMMDD-<sha>`) from
+its own CI workflows. Nothing in this repo drives its build pipeline —
+bump the fork SHA there, not here.
 
 ## `versions.yaml`
 
