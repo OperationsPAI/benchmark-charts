@@ -1,8 +1,0 @@
-loadgen:
-  image: docker.io/locustio/locust:2.27.0
-  targetHost: http://teastore-webui:80
-  users: 10
-  spawnRate: 2
-
-teastore:
-  clientside_loadbalancer: false

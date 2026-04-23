@@ -1,9 +1,0 @@
-apiVersion: v2
-name: hotelreservation-aegis
-description: DeathStarBench HotelReservation (Go microservices) wrapper for aegis. OperationsPAI/benchmark-charts.
-version: 0.1.0
-appVersion: "1.0.0"
-dependencies:
-- name: hotel-reservation
-  version: 0.1.0
-  repository: ""
