@@ -1,9 +1,0 @@
-apiVersion: v2
-name: sockshop-aegis
-description: sockshop (Coherence/Helidon fork) + aegis-cluster OTel shim (wrapper chart). OperationsPAI/benchmark-charts (issue #98).
-version: 0.1.2
-appVersion: "2.12.3"
-dependencies:
-- name: sockshop
-  version: 1.0.0
-  repository: ""
