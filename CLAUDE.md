@@ -6,17 +6,34 @@ or bumping an existing one.
 
 ## What this repo is
 
-A single-purpose Helm chart registry for the microservice benchmarks
-supported by [AegisLab](https://github.com/OperationsPAI/aegis). Each
-chart wraps an upstream demo app and adapts it for the aegis platform:
-kind-safe defaults, a standard ExternalName shim that forwards OTLP to
-the cluster OTel collector, disabled upstream features that assume
-cloud-provider infrastructure.
+A single-purpose Helm chart registry + image build pipeline for the
+microservice benchmarks supported by
+[AegisLab](https://github.com/OperationsPAI/aegis). Each wrapper chart
+adapts an upstream demo app for the aegis platform: kind-safe defaults,
+a standard ExternalName shim that forwards OTLP to the cluster OTel
+collector, disabled upstream features that assume cloud-provider
+infrastructure.
 
-We own the wrapping — we do not fork the upstream app. The upstream
-chart is vendored under `charts/<system>-aegis/charts/<system>/` and
-kept as close to stock as practical; only the pieces that break on our
-infra get patched out.
+**LGU-fork systems (hs / sn / media / teastore) are not wrapped here.**
+For those four we consume the helm chart directly from the fork's own
+gh-pages site
+(`https://lgu-se-internal.github.io/{DeathStarBench,TeaStore}/`) and
+this repo only owns the container images — see `tools/` and
+`versions.yaml`. The LGU fork already provides an aegis-friendly chart
+(configurable OTel endpoint, kind-safe), so wrapping it again would
+just add drift.
+
+Wrapping is still retained for:
+- `onlineboutique-aegis` — upstream is GoogleCloudPlatform's
+  microservices-demo; no aegis-friendly chart upstream.
+- `otel-demo-aegis` — upstream is open-telemetry/opentelemetry-demo;
+  needs kind-safe + OTel-endpoint overrides.
+- `sockshop-aegis` — pending rework; upstream is abandoned-ish.
+
+For those three we own the wrapping — we do not fork the upstream app.
+The upstream chart is vendored under
+`charts/<system>-aegis/charts/<system>/` and kept as close to stock as
+practical; only the pieces that break on our infra get patched out.
 
 ## Repo layout
 
@@ -34,8 +51,20 @@ charts/
 
 ## Adding a new chart
 
-Use an existing chart as the template — right now `onlineboutique-aegis`
-is the reference:
+**Wrapping is the fallback, not the default.** If the upstream (or a
+trusted fork like `LGU-SE-Internal/*`) already publishes its own chart
+via a gh-pages workflow AND that chart is aegis-friendly (configurable
+OTel endpoint, kind-safe, no cloud-only Services), skip wrapping
+entirely: register the chart directly in the aegis seed with values
+overrides, and — if you also own the images — add a `tools/systems/`
+conf + a `versions.yaml` entry so image builds stay reproducible.
+
+Only fall through to a wrapper chart when the upstream hardcodes the
+OTLP collector address, ships LoadBalancer Services or cloud agents,
+or otherwise can't be configured via values.
+
+When wrapping is needed, use an existing chart as the template — right
+now `onlineboutique-aegis` is the reference:
 
 1. `cp -r charts/onlineboutique-aegis charts/<new>-aegis`
 2. Remove the vendored subchart, pull the new upstream in. Upstreams
@@ -184,12 +213,16 @@ without the other.
   needs any of these, either disable via values or patch the subchart
   template.
 
-- **OTel shim, not OTel collector.** Every wrapper's shim
-  (`templates/otel-shim.yaml`) renders an `ExternalName` Service —
-  never a Deployment. The real collector lives in the cluster's
-  `otel` namespace (see AegisLab/manifests/otel-collector/); wrappers
-  must not re-implement it, and must not hardcode its address anywhere
-  other than `.Values.clusterCollector.service`.
+- **OTel shim, only when needed.** A wrapper's `templates/otel-shim.yaml`
+  (an `ExternalName` Service — never a Deployment) is included **only
+  if the upstream hardcodes the OTLP collector address and can't be
+  reconfigured via values**. When the upstream exposes a normal
+  `otlpExporter.endpoint` / `OTEL_EXPORTER_OTLP_ENDPOINT` value, point
+  it at the cluster collector directly and skip the shim. The real
+  collector lives in the cluster's `otel` namespace (see
+  AegisLab/manifests/otel-collector/); wrappers must never
+  re-implement it, and must never hardcode its address anywhere other
+  than `.Values.clusterCollector.service`.
 
 - **One-way upstream vendoring.** Never commit modifications to files
   under `charts/<system>-aegis/charts/<system>/` unless you can't

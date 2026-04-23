@@ -1,6 +1,0 @@
-dependencies:
-- name: media-microservices
-  repository: ""
-  version: 0.1.0
-digest: sha256:70cfc5f6471f31a6d8ac8ee9a7d212eaa4214b1b055206af29a3f1062b0647b0
-generated: "2026-04-21T13:01:37.144525467+01:00"

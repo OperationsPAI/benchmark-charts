@@ -1,6 +1,0 @@
-dependencies:
-- name: social-network
-  repository: ""
-  version: 0.1.0
-digest: sha256:c2b25c628e3ddfd213a91befeb686dab9990cab6acdae5a005a7cb63402acd44
-generated: "2026-04-21T10:22:55.308205798+01:00"
