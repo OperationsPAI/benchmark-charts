@@ -1,14 +1,14 @@
 # otel-demo-aegis
 
-Wrapper around the upstream [opentelemetry-demo](https://github.com/open-telemetry/opentelemetry-demo) chart for the aegis platform.
+Wrapper around the repo-local `otel-demo/` baseline for the aegis platform.
 
 ## What this changes vs upstream
 
 - **In-chart OTel collector kept** (`opentelemetry-collector.enabled: true`). Demo components still dial the namespace-local Service name `otel-collector:4317`, but that collector now forwards traces, metrics, and logs upstream to the cluster collector (`otel-collector.otel.svc.cluster.local:4317` by default).
 - **No cluster-scoped RBAC from the demo chart**. The wrapper disables the collector's `kubernetesAttributes` preset so installs in namespaces such as `otel-demo10`, `otel-demo11`, and `otel-demo12` do not fight over a shared `ClusterRole` / `ClusterRoleBinding`.
 - **No cross-namespace `ExternalName` shim**. Each release keeps its own stable `otel-collector` Service, so namespaces such as `otel-demo0` and `otel-demo1` do not depend on cross-namespace DNS aliases.
-- **Observability stack disabled** (`jaeger`, `grafana`, `prometheus`, `opensearch`). The cluster otel-kube-stack pipeline owns traces/metrics/logs; running the demo's full stack doubles the resource footprint and fights for port conflicts on kind.
-- **Local collector exports OTLP only**. The wrapper repoints the demo collector away from Jaeger/Prometheus/OpenSearch and sends all signals straight to the cluster collector, so this chart does not need local ClickHouse or other backend wiring.
+- **Observability stack disabled** (`jaeger`, `grafana`, `prometheus`, `opensearch`). The cluster otel-kube-stack pipeline owns traces/metrics/logs; the local demo backends are not rendered.
+- **Collector config replaced for aegis**. The wrapper swaps out the root chart's ClickHouse-oriented collector config and exports traces, metrics, and logs upstream to the cluster collector over OTLP instead.
 - Everything else (45 demo components, flagd, load generator) renders unchanged.
 
 ## Overriding the cluster collector
@@ -21,12 +21,11 @@ global:
 
 ## How to upgrade upstream
 
-The vendored subchart lives at `charts/opentelemetry-demo/`.
+The vendored subchart lives at `charts/opentelemetry-demo/` and should be refreshed from the repo-local `otel-demo/` directory.
 
 ```bash
-helm pull open-telemetry/opentelemetry-demo --version <new> --untar --untardir /tmp
-rm -rf charts/opentelemetry-demo
-cp -r /tmp/opentelemetry-demo charts/
+rm -rf charts/otel-demo-aegis/charts/opentelemetry-demo
+cp -r otel-demo charts/otel-demo-aegis/charts/opentelemetry-demo
 ```
 
-Bump `dependencies.opentelemetry-demo.version` and `appVersion` in `Chart.yaml`, then `helm lint` + `helm template` to verify. The `otel-collector` Service-name assumption (via `fullnameOverride: otel-collector`) is still the load-bearing bit — if upstream renames it, update the wrapper's collector overrides in `values.yaml`.
+After refreshing the vendored copy, re-apply the wrapper-only overrides in `values.yaml`, then run `helm lint` + `helm template` to verify. The `otel-collector` Service-name assumption (via `fullnameOverride: otel-collector`) is still the load-bearing bit.

@@ -11,8 +11,12 @@ default:
       value: otel-collector
     - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       value: cumulative
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
     - name: OTEL_RESOURCE_ATTRIBUTES
-      value: 'service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version={{ .Chart.AppVersion }}'
+      value: 'service.name=$(OTEL_SERVICE_NAME),service.namespace={{ .Release.Namespace }},service.version={{ .Chart.AppVersion }},pod.name=$(POD_NAME)'
   # Allows overriding and additions to .Values.default.env
   envOverrides: []
   #  - name: OTEL_K8S_NODE_NAME
@@ -181,7 +185,7 @@ components:
         value: "false"
     resources:
       limits:
-        memory: 120Mi
+        memory: 1Gi
     initContainers:
       - name: wait-for-kafka
         image: busybox:latest
@@ -206,7 +210,7 @@ components:
         value: otlp
     resources:
       limits:
-        memory: 300Mi
+        memory: 3Gi
 
   cart:
     enabled: true
@@ -229,7 +233,7 @@ components:
         value: http://$(OTEL_COLLECTOR_NAME):4317
     resources:
       limits:
-        memory: 160Mi
+        memory: 1Gi
     initContainers:
       - name: wait-for-valkey-cart
         image: busybox:latest
@@ -265,10 +269,10 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://$(OTEL_COLLECTOR_NAME):4317
       - name: GOMEMLIMIT
-        value: 16MiB
+        value: 100MiB
     resources:
       limits:
-        memory: 20Mi
+        memory: 200Mi
     initContainers:
       - name: wait-for-kafka
         image: busybox:latest
@@ -289,7 +293,7 @@ components:
         value: "{{ .Chart.AppVersion }}"
     resources:
       limits:
-        memory: 20Mi
+        memory: 200Mi
 
   email:
     enabled: true
@@ -310,7 +314,7 @@ components:
         value: "8013"
     resources:
       limits:
-        memory: 100Mi
+        memory: 1Gi
 
   fraud-detection:
     enabled: true
@@ -331,7 +335,7 @@ components:
         value: "true"
     resources:
       limits:
-        memory: 300Mi
+        memory: 3Gi
     initContainers:
       - name: wait-for-kafka
         image: busybox:latest
@@ -380,7 +384,7 @@ components:
         value: http://localhost:8080/otlp-http/v1/traces             # This expects users to use `kubectl port-forward ...`
     resources:
       limits:
-        memory: 250Mi
+        memory: 3Gi
     securityContext:
       runAsUser: 1001  # nextjs
       runAsGroup: 1001
@@ -433,7 +437,7 @@ components:
         value: "4318"
     resources:
       limits:
-        memory: 65Mi
+        memory: 500Mi
     securityContext:
       runAsUser: 101  # envoy
       runAsGroup: 101
@@ -454,7 +458,7 @@ components:
         value: $(OTEL_COLLECTOR_NAME)
     resources:
       limits:
-        memory: 50Mi
+        memory: 500Mi
 
   load-generator:
     enabled: true
@@ -489,9 +493,6 @@ components:
         value: "8016"
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://$(OTEL_COLLECTOR_NAME):4317
-    resources:
-      limits:
-        memory: 1500Mi
 
   payment:
     enabled: true
@@ -534,14 +535,14 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://$(OTEL_COLLECTOR_NAME):4317
       - name: GOMEMLIMIT
-        value: 16MiB
+        value: 100MiB
     mountedConfigMaps:
       - name: product-catalog-products
         mountPath: /usr/src/app/products
         existingConfigMap: product-catalog-products
     resources:
       limits:
-        memory: 20Mi
+        memory: 200Mi
 
   quote:
     enabled: true
@@ -560,7 +561,7 @@ components:
         value: http://$(OTEL_COLLECTOR_NAME):4318
     resources:
       limits:
-        memory: 40Mi
+        memory: 500Mi
     securityContext:
       runAsUser: 33  # www-data
       runAsGroup: 33
@@ -589,7 +590,7 @@ components:
         value: http://$(OTEL_COLLECTOR_NAME):4317
     resources:
       limits:
-        memory: 500Mi            # This is high to enable supporting the recommendationCache feature flag use case
+        memory: 4Gi           # This is high to enable supporting the recommendationCache feature flag use case
 
   shipping:
     enabled: true
@@ -606,7 +607,7 @@ components:
         value: http://$(OTEL_COLLECTOR_NAME):4317
     resources:
       limits:
-        memory: 20Mi
+        memory: 200Mi
 
   flagd:
     enabled: true
@@ -663,7 +664,7 @@ components:
             value: localhost
         resources:
           limits:
-            memory: 250Mi
+            memory: 2500Mi
         volumeMounts:
           - name: config-rw
             mountPath: /app/data
@@ -706,7 +707,7 @@ components:
         value: 1@kafka:9093
     resources:
       limits:
-        memory: 600Mi
+        memory: 5Gi
     securityContext:
       runAsUser: 1000  # appuser
       runAsGroup: 1000
@@ -728,7 +729,7 @@ components:
         value: otel
     resources:
       limits:
-        memory: 100Mi
+        memory: 1000Mi
 
   valkey-cart:
     enabled: true
@@ -743,7 +744,7 @@ components:
         value: 6379
     resources:
       limits:
-        memory: 20Mi
+        memory: 200Mi
     securityContext:
       runAsUser: 999  # valkey
       runAsGroup: 1000
@@ -820,11 +821,6 @@ opentelemetry-collector:
         endpoint: jaeger-collector:4317
         tls:
           insecure: true
-      # Create an exporter to Prometheus (metrics)
-      otlphttp/prometheus:
-        endpoint: http://prometheus:9090/api/v1/otlp
-        tls:
-          insecure: true
       opensearch:
         logs_index: otel-logs
         logs_index_time_format: "yyyy-MM-dd"
@@ -832,6 +828,19 @@ opentelemetry-collector:
           endpoint: http://opensearch:9200
           tls:
             insecure: true
+      clickhouse:
+        endpoint: tcp://10.10.10.58:9000?dial_timeout=10s&compress=lz4&username=default&password=password
+        database: default
+        ttl: 72h
+        logs_table_name: otel_logs
+        traces_table_name: otel_traces
+        metrics_table_name: otel_metrics
+        timeout: 5s
+        retry_on_failure:
+          enabled: true
+          initial_interval: 5s
+          max_interval: 30s
+          max_elapsed_time: 300s
 
     processors:
       memory_limiter:
@@ -846,11 +855,21 @@ opentelemetry-collector:
       transform:
         error_mode: ignore
         trace_statements:
+          # Sanitize spans to prevent span metrics cardinality explosion
+          # caused by non-compliant high cardinality span names:
+          # 1. Define missing http.route on key HTTP operations for meaningful operation names
+          # 2. Then normalize span names; http server spans lacking http.route default to operations "GET", "POST", etc.
           - context: span
+            # FRONTEND SERVICE
+            conditions:
+              - span.kind == SPAN_KIND_SERVER and resource.attributes["service.name"] == "frontend" and span.attributes["http.route"] == nil
             statements:
-              # could be removed when https://github.com/vercel/next.js/pull/64852 is fixed upstream
-              - replace_pattern(name, "\\?.*", "")
-              - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
+              # Workaround for Next.js high cardinality span name issue: https://github.com/vercel/next.js/issues/54694
+              - set(span.attributes["http.route"], "/api/cart") where IsMatch(span.attributes["http.target"], "\\/api\\/cart")  # e.g. # /api/cart
+              - set(span.attributes["http.route"], "/api/checkout") where IsMatch(span.attributes["http.target"], "\\/api\\/checkout")  # e.g. # /api/checkout
+              - set(span.attributes["http.route"], "/api/products/{productId}") where IsMatch(span.attributes["http.target"], "\\/api\\/products\\/.*")  # e.g. /api/products/1YMWWN1N4O
+              - set(span.attributes["http.route"], "/api/recommendations") where IsMatch(span.attributes["http.target"], "\\/api\\/recommendations")  # e.g. # /api/recommendations?productIds=...
+              - set(span.attributes["http.route"], "/api/data") where IsMatch(span.attributes["http.target"], "\\/api\\/data.*")  # e.g. # " /api/data?contextKeys=telescopes" or /api/data/?contextKeys=cameras
       resource:
         attributes:
         - key: service.instance.id
@@ -864,14 +883,14 @@ opentelemetry-collector:
       pipelines:
         traces:
           processors: [memory_limiter, resourcedetection, resource, transform, batch]
-          exporters: [otlp, debug, spanmetrics]
+          exporters: [otlp, debug, spanmetrics, clickhouse]
         metrics:
           receivers: [httpcheck/frontend-proxy, nginx, otlp, postgresql, redis, spanmetrics]
           processors: [memory_limiter, resourcedetection, resource, batch]
-          exporters: [otlphttp/prometheus, debug]
+          exporters: [debug, clickhouse]
         logs:
           processors: [memory_limiter, resourcedetection, resource, batch]
-          exporters: [opensearch, debug]
+          exporters: [opensearch, debug, clickhouse]
       telemetry:
         metrics:
           level: detailed
@@ -882,10 +901,11 @@ opentelemetry-collector:
                 exporter:
                   otlp:
                     protocol: http/protobuf
-                    endpoint: otel-collector:4318
+                    endpoint: http://otel-collector:4318
+                    insecure: true
 
 jaeger:
-  enabled: true
+  enabled: false
   fullnameOverride: jaeger
   provisionDataStore:
     cassandra: false
@@ -894,19 +914,19 @@ jaeger:
     args:
       - "--memory.max-traces=5000"
       - "--query.base-path=/jaeger/ui"
-      - "--prometheus.server-url=http://prometheus:9090"
+      - "--prometheus.server-url=http://prometheus-stack-kube-prom-prometheus.monitoring:9090"
       - "--prometheus.query.normalize-calls=true"
       - "--prometheus.query.normalize-duration=true"
     extraEnv:
       - name: METRICS_STORAGE_TYPE
         value: prometheus
       - name: COLLECTOR_OTLP_GRPC_HOST_PORT
-        value: 0.0.0.0:4317
+        value: opentelemetry-kube-stack-deployment-collector.monitoring:4317
       - name: COLLECTOR_OTLP_HTTP_HOST_PORT
-        value: 0.0.0.0:4318
+        value: opentelemetry-kube-stack-deployment-collector.monitoring:4318
     resources:
       limits:
-        memory: 400Mi
+        memory: 2Gi
   storage:
     type: memory
   agent:
@@ -917,7 +937,7 @@ jaeger:
     enabled: false
 
 prometheus:
-  enabled: true
+  enabled: false
   alertmanager:
     enabled: false
   configmapReload:
@@ -977,7 +997,7 @@ prometheus:
       servicePort: 9090
     resources:
       limits:
-        memory: 300Mi
+        memory: 2Gi
 
 grafana:
   enabled: true
@@ -1010,7 +1030,7 @@ grafana:
         memory: 100Mi
   resources:
     limits:
-      memory: 150Mi
+      memory: 1Gi
 
 opensearch:
   enabled: true
@@ -1030,4 +1050,4 @@ opensearch:
       value: "true"
   resources:
     limits:
-      memory: 1100Mi
+      memory: 4Gi

@@ -34,20 +34,117 @@ opentelemetry-demo:
       # the cluster collector performs the cluster-wide enrichment/export path.
       kubernetesAttributes:
         enabled: false
-    config:
+    # Replace the repo-local otel-demo collector config so the wrapper can drop
+    # ClickHouse and export all signals to the cluster collector instead.
+    alternateConfig:
       exporters:
+        debug: {}
         otlp:
           endpoint: "{{ .Values.global.clusterCollector.service }}:4317"
           tls:
             insecure: true
+      extensions:
+        health_check:
+          endpoint: ${env:MY_POD_IP}:13133
+      processors:
+        batch: {}
+        memory_limiter:
+          check_interval: 5s
+          limit_percentage: 80
+          spike_limit_percentage: 25
+        resourcedetection:
+          detectors: [env, system]
+        transform:
+          error_mode: ignore
+          trace_statements:
+            - context: span
+              conditions:
+                - span.kind == SPAN_KIND_SERVER and resource.attributes["service.name"] == "frontend" and span.attributes["http.route"] == nil
+              statements:
+                - set(span.attributes["http.route"], "/api/cart") where IsMatch(span.attributes["http.target"], "\\/api\\/cart")
+                - set(span.attributes["http.route"], "/api/checkout") where IsMatch(span.attributes["http.target"], "\\/api\\/checkout")
+                - set(span.attributes["http.route"], "/api/products/{productId}") where IsMatch(span.attributes["http.target"], "\\/api\\/products\\/.*")
+                - set(span.attributes["http.route"], "/api/recommendations") where IsMatch(span.attributes["http.target"], "\\/api\\/recommendations")
+                - set(span.attributes["http.route"], "/api/data") where IsMatch(span.attributes["http.target"], "\\/api\\/data.*")
+        resource:
+          attributes:
+            - key: service.instance.id
+              from_attribute: k8s.pod.uid
+              action: insert
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: ${env:MY_POD_IP}:4317
+            http:
+              endpoint: ${env:MY_POD_IP}:4318
+              cors:
+                allowed_origins:
+                  - "http://*"
+                  - "https://*"
+        httpcheck/frontend-proxy:
+          targets:
+            - endpoint: http://frontend-proxy:8080
+        nginx:
+          endpoint: http://image-provider:8081/status
+          collection_interval: 10s
+        postgresql:
+          endpoint: "postgresql:5432"
+          username: "root"
+          password: "otel"
+          metrics:
+            postgresql.blks_hit:
+              enabled: true
+            postgresql.blks_read:
+              enabled: true
+            postgresql.tup_fetched:
+              enabled: true
+            postgresql.tup_returned:
+              enabled: true
+            postgresql.tup_inserted:
+              enabled: true
+            postgresql.tup_updated:
+              enabled: true
+            postgresql.tup_deleted:
+              enabled: true
+            postgresql.deadlocks:
+              enabled: true
+          tls:
+            insecure: true
+        redis:
+          endpoint: "valkey-cart:6379"
+          username: "valkey"
+          collection_interval: 10s
+      connectors:
+        spanmetrics: {}
       service:
+        extensions:
+          - health_check
         pipelines:
           traces:
-            exporters: [otlp, spanmetrics]
+            receivers: [otlp]
+            processors: [memory_limiter, resourcedetection, resource, transform, batch]
+            exporters: [otlp, debug, spanmetrics]
           metrics:
-            exporters: [otlp]
+            receivers: [httpcheck/frontend-proxy, nginx, otlp, postgresql, redis, spanmetrics]
+            processors: [memory_limiter, resourcedetection, resource, batch]
+            exporters: [otlp, debug]
           logs:
-            exporters: [otlp]
+            receivers: [otlp]
+            processors: [memory_limiter, resourcedetection, resource, batch]
+            exporters: [otlp, debug]
+        telemetry:
+          metrics:
+            level: detailed
+            readers:
+              - periodic:
+                  interval: 10000
+                  timeout: 5000
+                  exporter:
+                    otlp:
+                      protocol: http/protobuf
+                      endpoint: http://otel-collector:4318
+                      insecure: true
 
   # Demo observability stack disabled — the cluster otel-kube-stack pipeline
   # owns traces/metrics/logs. Re-enable locally if someone needs the demo UI.

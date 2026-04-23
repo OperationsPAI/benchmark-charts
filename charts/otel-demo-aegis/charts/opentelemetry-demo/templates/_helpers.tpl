@@ -35,6 +35,7 @@ Workload (Pod) labels
 {{- if .name }}
 app.kubernetes.io/component: {{ .name}}
 app.kubernetes.io/name: {{ .name }}
+app: {{ .name}}
 {{- end }}
 {{- end }}
 
