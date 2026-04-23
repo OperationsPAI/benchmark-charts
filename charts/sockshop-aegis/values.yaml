@@ -7,12 +7,20 @@ sockshop:
     imageTag: "2.12.3"
     imagePullPolicy: IfNotPresent
     coherenceCluster: SockShop
+  otel:
+    # Keep collector and instrumentation references configurable so this chart
+    # can run against different aegis cluster layouts without patching the
+    # vendored sockshop templates.
+    collectorEndpoint: "http://opentelemetry-kube-stack-deployment-collector.monitoring:4317"
+    instrumentation: "monitoring/opentelemetry-kube-stack"
   frontend:
     enabled: true
     replicas: 1
     image:
       repository: ss-frontend
       tag: "propagator"
+    env:
+      otelExporterEndpoint: "http://opentelemetry-kube-stack-deployment-collector.monitoring:4317"
     # ClusterIP keeps kind happy (no LB provider); fault injection is pod-label
     # targeted so external access is not required for aegis workflows.
     service:
@@ -27,9 +35,11 @@ sockshop:
       runAsUser: 10001
       readOnlyRootFilesystem: false
   loadgen:
-    # Disabled by default; aegis handles its own traffic generation for
-    # fault-injection regression runs.
-    enabled: false
+    enabled: true
+    load:
+      # Same-namespace service discovery is enough here; avoid a hardcoded
+      # namespace-qualified DNS name so parallel installs work unchanged.
+      targetHost: "http://front-end"
   coherence:
     # Service monitors require prometheus-operator CRDs. Most aegis clusters
     # don't install them, so turn off ServiceMonitor creation to keep
