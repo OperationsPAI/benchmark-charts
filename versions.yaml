@@ -1,0 +1,11 @@
+# Source of truth for the upstream LGU-SE-Internal fork commit SHAs
+# that our container images are built from. Bumping a value here, then
+# running `tools/sync.sh <sys>`, rebuilds and pushes that system's
+# images under the unified tag `YYYYMMDD-<sha>`.
+#
+# The chart for each of these systems lives in the fork's gh-pages
+# site, not in this repo — we only own the images.
+hs: 61074ea        # github.com/LGU-SE-Internal/DeathStarBench (hotelReservation)
+sn: 61074ea        # github.com/LGU-SE-Internal/DeathStarBench (socialNetwork)
+media: 61074ea     # github.com/LGU-SE-Internal/DeathStarBench (mediaMicroservices)
+teastore: 2b3fd43  # github.com/LGU-SE-Internal/TeaStore
