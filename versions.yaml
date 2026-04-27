@@ -6,6 +6,6 @@
 # The chart for each of these systems lives in the fork's gh-pages
 # site, not in this repo — we only own the images.
 hs: 61074ea        # github.com/LGU-SE-Internal/DeathStarBench (hotelReservation)
-sn: 61074ea        # github.com/LGU-SE-Internal/DeathStarBench (socialNetwork)
-media: 61074ea     # github.com/LGU-SE-Internal/DeathStarBench (mediaMicroservices)
+sn: 9397c2e        # github.com/LGU-SE-Internal/DeathStarBench (socialNetwork)
+media: 9397c2e     # github.com/LGU-SE-Internal/DeathStarBench (mediaMicroservices)
 teastore: 2b3fd43  # github.com/LGU-SE-Internal/TeaStore
