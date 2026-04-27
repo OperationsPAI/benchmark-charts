@@ -99,10 +99,10 @@
         "payment": {
           "$ref": "#/definitions/Component"
         },
-        "postgresql": {
+        "product-catalog": {
           "$ref": "#/definitions/Component"
         },
-        "product-catalog": {
+        "product-reviews": {
           "$ref": "#/definitions/Component"
         },
         "quote": {
@@ -115,6 +115,12 @@
           "$ref": "#/definitions/Component"
         },
         "kafka": {
+          "$ref": "#/definitions/Component"
+        },
+        "llm": {
+          "$ref": "#/definitions/Component"
+        },
+        "postgresql": {
           "$ref": "#/definitions/Component"
         },
         "valkey-cart": {
@@ -198,8 +204,14 @@
         "livenessProbe": {
           "$ref": "#/definitions/LivenessProbe"
         },
+        "readinessProbe": {
+          "$ref": "#/definitions/ReadinessProbe"
+        },
         "schedulingRules": {
           "$ref": "#/definitions/SchedulingRules"
+        },
+        "podLabels": {
+          "type": "object"
         },
         "podAnnotations": {
           "type": "object"
@@ -640,6 +652,69 @@
       ]
     },
     "LivenessProbe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "httpGet"
+      ],
+      "properties": {
+        "httpGet": {
+          "type": "object",
+          "required": [
+            "port"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "host": {
+              "type": "string"
+            },
+            "scheme": {
+              "type": "string"
+            },
+            "httpHeaders": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "value"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "port": {
+              "type": "integer"
+            }
+          }
+        },
+        "initialDelaySeconds": {
+          "type": "integer"
+        },
+        "timeoutSeconds": {
+          "type": "integer"
+        },
+        "periodSeconds": {
+          "type": "integer"
+        },
+        "successThreshold": {
+          "type": "integer"
+        },
+        "failureThreshold": {
+          "type": "integer"
+        }
+      }
+    },
+    "ReadinessProbe": {
       "type": "object",
       "additionalProperties": false,
       "required": [
