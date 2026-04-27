@@ -27,7 +27,9 @@ bump the fork SHA there, not here.
 ## `versions.yaml`
 
 Single source of truth for which upstream commit SHA each system is
-pinned to. Bump a value here, then run the sync:
+pinned to. Bumping `versions.yaml` on `main` now triggers
+`.github/workflows/build-images.yml` — manual `sync.sh` is only needed
+for local debugging.
 
 ```bash
 tools/sync.sh hs        # one system

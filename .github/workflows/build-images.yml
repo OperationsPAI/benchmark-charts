@@ -1,0 +1,122 @@
+name: build-images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - versions.yaml
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Which system to build (hs|sn|media|teastore|all)"
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - hs
+          - sn
+          - media
+          - teastore
+
+jobs:
+  build:
+    name: build ${{ matrix.sys }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sys: [hs, sn, media, teastore]
+    concurrency:
+      group: build-images-${{ matrix.sys }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Decide whether to build
+        id: gate
+        env:
+          SYS: ${{ matrix.sys }}
+          DISPATCH_TARGET: ${{ github.event.inputs.target }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          should_run=0
+          reason=""
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            if [[ "$DISPATCH_TARGET" == "all" || "$DISPATCH_TARGET" == "$SYS" ]]; then
+              should_run=1
+              reason="workflow_dispatch target=$DISPATCH_TARGET"
+            else
+              reason="workflow_dispatch target=$DISPATCH_TARGET does not include $SYS"
+            fi
+          else
+            # Push event: only run if this system's line in versions.yaml changed.
+            if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+              if git diff --unified=0 HEAD^ HEAD -- versions.yaml \
+                  | grep -E "^[+-]${SYS}:" >/dev/null; then
+                should_run=1
+                reason="versions.yaml changed for $SYS"
+              else
+                reason="versions.yaml unchanged for $SYS"
+              fi
+            else
+              # No parent commit (initial commit / shallow miss): run to be safe.
+              should_run=1
+              reason="no parent commit available; building defensively"
+            fi
+          fi
+          echo "should_run=$should_run" >>"$GITHUB_OUTPUT"
+          echo "reason=$reason" >>"$GITHUB_OUTPUT"
+          echo "decision: should_run=$should_run ($reason)"
+
+      - name: Free disk
+        if: steps.gate.outputs.should_run == '1'
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/share/boost
+          sudo docker system prune -af
+          df -h /
+
+      - name: Set up Docker Buildx
+        if: steps.gate.outputs.should_run == '1'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: steps.gate.outputs.should_run == '1'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push images for ${{ matrix.sys }}
+        if: steps.gate.outputs.should_run == '1'
+        env:
+          SYS: ${{ matrix.sys }}
+        run: |
+          set -euo pipefail
+          bash tools/sync.sh "$SYS"
+
+      - name: Summarise pushed tags
+        if: steps.gate.outputs.should_run == '1'
+        env:
+          SYS: ${{ matrix.sys }}
+        run: |
+          set -euo pipefail
+          source tools/lib/common.sh
+          tag="$(tag_for "$SYS")"
+          {
+            echo "### ${SYS} pushed tags"
+            echo ""
+            echo "Tag: \`${tag}\`"
+            echo ""
+            bash tools/build-images.sh "$SYS" --verify-only 2>&1 \
+              | sed -n 's/^.* ok: \(.*\)  digest=\(.*\)$/- `\1` (\2)/p'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Skipped
+        if: steps.gate.outputs.should_run != '1'
+        run: |
+          echo "Skipping ${{ matrix.sys }}: ${{ steps.gate.outputs.reason }}"
