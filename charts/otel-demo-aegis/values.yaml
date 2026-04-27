@@ -90,8 +90,8 @@ opentelemetry-demo:
           collection_interval: 10s
         postgresql:
           endpoint: "postgresql:5432"
-          username: "root"
-          password: "otel"
+          username: "otelu"
+          password: "otelp"
           metrics:
             postgresql.blks_hit:
               enabled: true

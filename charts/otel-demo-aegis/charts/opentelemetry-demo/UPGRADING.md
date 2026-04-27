@@ -5,6 +5,30 @@
 > another. If you need to upgrade the chart, you must first delete the existing
 > release and then install the new version.
 
+
+## To 0.40.4
+
+The `transform` processor now uses the `set_semconv_span_name()` function to
+reduce span metrics cardinality explosion caused by high-cardinality span names.
+See the [processor documentation](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/transformprocessor#set_semconv_span_name)
+and [troubleshooting guide](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/connector/spanmetricsconnector/README.md#troubleshooting-span-metrics-high-cardinality)
+for details.
+
+## To 0.40
+
+The product catalog has been moved to use a Postgres database. Custom products
+(and product reviews) can be specified with your own init-db.sql script
+contained in a custom ConfigMap, and referenced for the Postgres component.
+
+The Jaeger sub-chart was upgraded to 4.3, which included several breaking
+changes to prior configurations.
+
+Support for `podLabels` has been added to all components.
+
+## To 0.39
+
+Support for IPv6 environments was introduced to the demo.
+
 ## To 0.38
 
 A new postgresql container was introduced to the demo.
@@ -19,7 +43,7 @@ component that was renamed will need to be updated to use the new name. The
 following table shows the old and new names for each component:
 
 | Old Name               | New Name        |
-|------------------------|-----------------|
+| ---------------------- | --------------- |
 | accountingservice      | accounting      |
 | adservice              | ad              |
 | cartservice            | cart            |
