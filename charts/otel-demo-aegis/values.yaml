@@ -69,6 +69,13 @@ opentelemetry-demo:
   # lets the wrapper forward everything upstream over a single OTLP exporter.
   opentelemetry-collector:
     enabled: true
+    # Run as a single Deployment, not a per-node DaemonSet. The cluster already
+    # runs `monitoring/opentelemetry-kube-stack-daemon` for host/kubelet/pod
+    # metrics + container logs; the only job of THIS in-namespace collector is
+    # to receive demo-app OTLP and forward to the cluster collector. A daemonset
+    # variant also collides on hostPort 4317/4318 with the cluster daemon and
+    # leaves every pod Pending (benchmark-charts#9).
+    mode: deployment
     # Force-disable cluster-scoped RBAC creation for parallel-install safety.
     # The opentelemetry-collector subchart's clusterrole.yaml renders if ANY
     # of these are enabled: clusterRole.create OR presets.kubernetesAttributes
