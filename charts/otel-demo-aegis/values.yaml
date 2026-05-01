@@ -27,13 +27,34 @@ opentelemetry-demo:
   # lets the wrapper forward everything upstream over a single OTLP exporter.
   opentelemetry-collector:
     enabled: true
+    # Force-disable cluster-scoped RBAC creation for parallel-install safety.
+    # The opentelemetry-collector subchart's clusterrole.yaml renders if ANY
+    # of these are enabled: clusterRole.create OR presets.kubernetesAttributes
+    # OR presets.clusterMetrics OR presets.kubeletMetrics OR
+    # presets.kubernetesEvents OR presets.annotationDiscovery.{logs,metrics}.
+    # The opentelemetry-demo subchart's defaults turn several of these on, so
+    # disabling kubernetesAttributes alone is NOT enough — the ClusterRole
+    # `otel-collector` still gets rendered and the second parallel install
+    # into a sibling namespace fails with "ClusterRole exists and cannot be
+    # imported into the current release: invalid ownership metadata"
+    # (helm.sh/release-name mismatch). Disable every triggering knob below
+    # so multiple otel-demoN installs can coexist.
+    clusterRole:
+      create: false
     presets:
-      # Disable the kubernetesAttributes preset so the demo collector stays
-      # namespace-scoped and does not create ClusterRole/ClusterRoleBinding
-      # objects. App pods already inject k8s.pod.name + k8s.namespace.name, and
-      # the cluster collector performs the cluster-wide enrichment/export path.
       kubernetesAttributes:
         enabled: false
+      clusterMetrics:
+        enabled: false
+      kubeletMetrics:
+        enabled: false
+      kubernetesEvents:
+        enabled: false
+      annotationDiscovery:
+        logs:
+          enabled: false
+        metrics:
+          enabled: false
     # Replace the repo-local otel-demo collector config so the wrapper can drop
     # ClickHouse and export all signals to the cluster collector instead.
     alternateConfig:
