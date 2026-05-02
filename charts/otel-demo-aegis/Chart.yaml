@@ -1,7 +1,7 @@
 apiVersion: v2
 name: otel-demo-aegis
 description: opentelemetry-demo wrapper for aegis. Keeps the demo's in-namespace collector, avoids cluster-scoped RBAC, and forwards OTLP to the cluster collector.
-version: 0.1.8
+version: 0.1.9
 appVersion: "2.2.0"
 dependencies:
 - name: opentelemetry-demo

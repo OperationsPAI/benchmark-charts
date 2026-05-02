@@ -1,0 +1,6 @@
+dependencies:
+- name: opentelemetry-demo
+  repository: ""
+  version: 0.40.7
+digest: sha256:f74b420d9664dd11974a9477030dc32ccf52969b5b86da7b600b7d7aae52553d
+generated: "2026-05-02T06:49:27.970042152+01:00"
