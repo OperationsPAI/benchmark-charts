@@ -33,7 +33,7 @@ otelCollector:
   name: aegis-otel-collector
   replicas: 1
   image:
-    repository: docker.io/opspai/opentelemetry-collector-contrib
+    repository: pair-cn-shanghai.cr.volces.com/opspai/opentelemetry-collector-contrib
     tag: 0.142.0
     pullPolicy: IfNotPresent
   resources:
