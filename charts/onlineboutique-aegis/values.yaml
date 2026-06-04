@@ -1,14 +1,19 @@
 clusterCollector:
-  service: otel-collector.otel.svc.cluster.local
+  # Empty -> otel-shim defaults to the in-ns aegis-otel-collector. Override to
+  # send to an external/shared collector instead.
+  service: ""
 
 onlineboutique:
   images:
-    repository: us-central1-docker.pkg.dev/google-samples/microservices-demo
+    repository: pair-cn-shanghai.cr.volces.com/opspai
     tag: ""
   opentelemetryCollector:
     create: true
     name: opentelemetrycollector
     projectId: "PROJECT_ID"
+  # tracing:true is what injects ENABLE_TRACING + COLLECTOR_SERVICE_ADDR into the
+  # services (the OTel path, NOT just GCP). With opentelemetryCollector.create=true
+  # traces go to the in-ns collector, not GCP, so the PROJECT_ID placeholder is inert.
   googleCloudOperations:
     profiler: false
     tracing: true
@@ -19,3 +24,41 @@ onlineboutique:
   shoppingAssistantService: { create: false }
   frontend:
     externalService: false   # kind cluster has no LB provider; skip LoadBalancer svc
+
+# Per-namespace OTel collector (mirrors otel-demo-aegis): ob services
+# -> opentelemetrycollector ExternalName -> this in-ns aegis-otel-collector
+# -> ClickHouse. Replaces the dead otel-collector.otel.svc shim.
+otelCollector:
+  enabled: true
+  name: aegis-otel-collector
+  replicas: 1
+  image:
+    repository: docker.io/opspai/opentelemetry-collector-contrib
+    tag: 0.142.0
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      cpu: 2
+      memory: 4Gi
+  clickhouse:
+    endpoint: tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default
+    database: otel
+    tracesTableName: otel_traces
+    metricsTableName: otel_metrics
+    logsTableName: otel_logs
+    ttl: 72h
+    timeout: 30s
+  sendingQueue:
+    enabled: true
+    numConsumers: 10
+    queueSize: 5000
+  batch:
+    sendBatchSize: 2000
+    sendBatchMaxSize: 4000
+    timeout: 5s
+  memoryLimiter:
+    limitPercentage: 75
+    spikeLimitPercentage: 15

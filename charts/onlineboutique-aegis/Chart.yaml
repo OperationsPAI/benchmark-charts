@@ -1,7 +1,7 @@
 apiVersion: v2
 name: onlineboutique-aegis
 description: onlineboutique + aegis-cluster OTel shim (wrapper chart). Proof of concept for OperationsPAI/benchmark-charts (issue #92).
-version: 0.1.1
+version: 0.1.2
 appVersion: "v0.10.5"
 dependencies:
 - name: onlineboutique
