@@ -1,8 +1,7 @@
-# Static ExternalName Service replacing what the subchart's
-# opentelemetry-collector.yaml would have deployed. Services in this
-# release are injected with COLLECTOR_SERVICE_ADDR=opentelemetrycollector:4317
-# (gated by onlineboutique.opentelemetryCollector.create=true); this Service
-# resolves that name to the cluster-wide collector.
+# ExternalName Service that resolves the subchart's injected
+# COLLECTOR_SERVICE_ADDR=opentelemetrycollector:4317 to the per-namespace
+# aegis-otel-collector deployed by this chart (otel-collector-*.yaml). Override
+# clusterCollector.service to point elsewhere; default is the in-ns collector.
 apiVersion: v1
 kind: Service
 metadata:
@@ -10,7 +9,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   type: ExternalName
-  externalName: {{ .Values.clusterCollector.service }}
+  externalName: {{ .Values.clusterCollector.service | default (printf "%s.%s.svc.cluster.local" .Values.otelCollector.name .Release.Namespace) }}
   ports:
   - name: otlp-grpc
     port: 4317
